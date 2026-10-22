@@ -62,7 +62,6 @@
         }
         .card-info p { margin: 4px 0; font-size: 14px; }
 
-        /* Estilo para la nota de importancia */
         .notice-box {
             background: rgba(245, 158, 11, 0.1);
             border: 1px dashed #f59e0b;
@@ -104,7 +103,6 @@
 <body>
 
 <div class="container">
-    <!-- Logotipo de Studio Vivencia -->
     <div class="logo-container">
         <img src="logo.png" alt="Studio Vivencia Logo" class="logo-img" onerror="this.style.display='none'">
     </div>
@@ -147,12 +145,11 @@
         <p><strong>CURP:</strong> <span id="infoCurp">-</span></p>
     </div>
 
-    <!-- 5. Registro de Teléfono con Nota de Advertencia -->
+    <!-- 5. Registro de Teléfono con Protección de Datos -->
     <div class="form-group" id="phoneGroup" style="display: none;">
         <label>4. Número de WhatsApp del Tutor (10 dígitos):</label>
         <input type="tel" id="phoneInput" placeholder="Ej: 5512345678" maxlength="10">
         
-        <!-- Nota de importancia elegida -->
         <div class="notice-box" id="noticeBox">
             <p>⚠️ <strong>IMPORTANTE:</strong> Asegúrate de que los 10 dígitos sean correctos. A este número le llegarán las alertas de entrada y salida de tu hijo(a).</p>
         </div>
@@ -164,7 +161,6 @@
 </div>
 
 <script>
-    // ⚠️ TU URL DE GOOGLE APPS SCRIPT
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyP8W6dhKXtbqGVkbJGJDV96M-Y5raFrxHrTMDX3i8Ktv06ubcn-i4dfQDJm-rH2NLdbQ/exec";
 
     let allStudents = [];
@@ -261,7 +257,8 @@
             document.getElementById('infoGrado').innerText = `Grupo ${displayGrupo} (${displayTurno})`;
             document.getElementById('infoCurp').innerText = selectedStudent.curp || "N/A";
             
-            document.getElementById('phoneInput').value = selectedStudent.telefono || "";
+            // 🔒 SEGURIDAD: Siempre dejar la casilla vacía para proteger la privacidad
+            document.getElementById('phoneInput').value = "";
             
             document.getElementById('studentCard').style.display = "block";
             document.getElementById('phoneGroup').style.display = "block";
@@ -297,7 +294,9 @@
             if (data.status === "success") {
                 statusMsg.innerText = "✅ ¡Número registrado correctamente!";
                 statusMsg.style.color = "#22c55e";
-                selectedStudent.telefono = phone;
+                
+                // 🔒 SEGURIDAD: Limpiar la casilla inmediatamente al guardar
+                document.getElementById('phoneInput').value = "";
             } else {
                 statusMsg.innerText = "❌ Hubo un problema al guardar.";
                 statusMsg.style.color = "#ef4444";
