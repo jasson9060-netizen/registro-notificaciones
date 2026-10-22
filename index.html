@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de WhatsApp - Notificaciones Escolares</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: #1e293b;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #334155;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h2 { margin: 0; color: #38bdf8; font-size: 20px; }
+        .header p { color: #94a3b8; font-size: 13px; margin-top: 5px; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; color: #cbd5e1; margin-bottom: 6px; font-weight: 600; }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background-color: #0f172a;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+        }
+        input:focus, select:focus { border-color: #38bdf8; }
+
+        .card-info {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #38bdf8;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .card-info p { margin: 4px 0; font-size: 14px; }
+        
+        button {
+            width: 100%;
+            background: #22c55e;
+            color: #000;
+            font-weight: bold;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover { background: #16a34a; color: #fff; }
+        
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>🔔 Notificaciones Escolares</h2>
+        <p>Studio Vivencia — Registro de WhatsApp de Tutores</p>
+    </div>
+
+    <!-- 1. Buscar Alumno -->
+    <div class="form-group">
+        <label>1. Selecciona o busca el Nombre del Alumno:</label>
+        <input type="text" id="searchInput" placeholder="Escribe el nombre del alumno..." oninput="filterStudents()">
+    </div>
+
+    <div class="form-group">
+        <select id="studentSelect" size="5" onchange="selectStudent()">
+            <option value="">Cargando lista de alumnos...</option>
+        </select>
+    </div>
+
+    <!-- 2. Información del Alumno Seleccionado -->
+    <div class="card-info" id="studentCard">
+        <p><strong>Alumno:</strong> <span id="infoNombre">-</span></p>
+        <p><strong>Grado y Grupo:</strong> <span id="infoGrado">-</span></p>
+        <p><strong>CURP:</strong> <span id="infoCurp">-</span></p>
+    </div>
+
+    <!-- 3. Campo de Teléfono -->
+    <div class="form-group" id="phoneGroup" style="display: none;">
+        <label>2. Número de WhatsApp del Tutor (10 dígitos):</label>
+        <input type="tel" id="phoneInput" placeholder="Ej: 5512345678" maxlength="10">
+        <button style="margin-top: 15px;" onclick="savePhone()">💾 GUARDAR NÚMERO DE WHATSAPP</button>
+    </div>
+
+    <div class="status" id="statusMsg"></div>
+</div>
+
+<script>
+    // ⚠️ REEMPLAZA ESTA URL CON LA TUYA DE GOOGLE APPS SCRIPT
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyP8W6dhKXtbqGVkbJGJDV96M-Y5raFrxHrTMDX3i8Ktv06ubcn-i4dfQDJm-rH2NLdbQ/exec";
+
+    let allStudents = [];
+    let selectedStudent = null;
+
+    // Cargar alumnos al abrir la página
+    window.onload = function() {
+        fetch(SCRIPT_URL + "?action=getStudents")
+            .then(res => res.json())
+            .then(data => {
+                allStudents = data;
+                renderStudentList(allStudents);
+            })
+            .catch(err => {
+                document.getElementById('statusMsg').innerText = "❌ Error al cargar lista de alumnos.";
+                document.getElementById('statusMsg').style.color = "#ef4444";
+            });
+    };
+
+    function renderStudentList(list) {
+        const select = document.getElementById('studentSelect');
+        select.innerHTML = "";
+        if(list.length === 0) {
+            select.innerHTML = '<option value="">No se encontraron alumnos</option>';
+            return;
+        }
+        list.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.innerText = `${s.nombre} (${s.gradoGrupo})`;
+            select.appendChild(opt);
+        });
+    }
+
+    function filterStudents() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = allStudents.filter(s => 
+            s.nombre.toLowerCase().includes(query) || 
+            s.gradoGrupo.toLowerCase().includes(query)
+        );
+        renderStudentList(filtered);
+    }
+
+    function selectStudent() {
+        const id = document.getElementById('studentSelect').value;
+        selectedStudent = allStudents.find(s => s.id == id);
+
+        if (selectedStudent) {
+            document.getElementById('infoNombre').innerText = selectedStudent.nombre;
+            document.getElementById('infoGrado').innerText = selectedStudent.gradoGrupo;
+            document.getElementById('infoCurp').innerText = selectedStudent.curp;
+            
+            document.getElementById('phoneInput').value = selectedStudent.telefono || "";
+            document.getElementById('studentCard').style.display = "block";
+            document.getElementById('phoneGroup').style.display = "block";
+            document.getElementById('statusMsg').innerText = "";
+        }
+    }
+
+    function savePhone() {
+        const phone = document.getElementById('phoneInput').value.trim();
+        const statusMsg = document.getElementById('statusMsg');
+
+        if (phone.length !== 10 || isNaN(phone)) {
+            statusMsg.innerText = "⚠️ Ingresa un número de WhatsApp válido a 10 dígitos.";
+            statusMsg.style.color = "#f59e0b";
+            return;
+        }
+
+        statusMsg.innerText = "⏳ Guardando...";
+        statusMsg.style.color = "#38bdf8";
+
+        fetch(SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({
+                id: selectedStudent.id,
+                telefono: phone
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "success") {
+                statusMsg.innerText = "✅ ¡Número registrado correctamente!";
+                statusMsg.style.color = "#22c55e";
+                selectedStudent.telefono = phone; // Actualizar en memoria local
+            } else {
+                statusMsg.innerText = "❌ Hubo un problema al guardar.";
+                statusMsg.style.color = "#ef4444";
+            }
+        })
+        .catch(err => {
+            statusMsg.innerText = "❌ Error de conexión al guardar.";
+            statusMsg.style.color = "#ef4444";
+        });
+    }
+</script>
+
+</body>
+</html>
