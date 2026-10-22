@@ -24,6 +24,15 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             border: 1px solid #334155;
         }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .logo-img {
+            max-width: 160px;
+            height: auto;
+            object-fit: contain;
+        }
         .header { text-align: center; margin-bottom: 20px; }
         .header h2 { margin: 0; color: #38bdf8; font-size: 20px; }
         .header p { color: #94a3b8; font-size: 13px; margin-top: 5px; }
@@ -52,6 +61,23 @@
             display: none;
         }
         .card-info p { margin: 4px 0; font-size: 14px; }
+
+        /* Estilo para la nota de importancia */
+        .notice-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px dashed #f59e0b;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            margin-bottom: 15px;
+        }
+        .notice-box p {
+            margin: 0;
+            font-size: 13px;
+            color: #fcd34d;
+            line-height: 1.4;
+            text-align: center;
+        }
         
         button {
             width: 100%;
@@ -78,6 +104,11 @@
 <body>
 
 <div class="container">
+    <!-- Logotipo de Studio Vivencia -->
+    <div class="logo-container">
+        <img src="logo.png" alt="Studio Vivencia Logo" class="logo-img" onerror="this.style.display='none'">
+    </div>
+
     <div class="header">
         <h2>🔔 Notificaciones Escolares</h2>
         <p>Studio Vivencia — Registro de WhatsApp de Tutores</p>
@@ -116,11 +147,17 @@
         <p><strong>CURP:</strong> <span id="infoCurp">-</span></p>
     </div>
 
-    <!-- 5. Registro de Teléfono -->
+    <!-- 5. Registro de Teléfono con Nota de Advertencia -->
     <div class="form-group" id="phoneGroup" style="display: none;">
         <label>4. Número de WhatsApp del Tutor (10 dígitos):</label>
         <input type="tel" id="phoneInput" placeholder="Ej: 5512345678" maxlength="10">
-        <button style="margin-top: 15px;" onclick="savePhone()">💾 GUARDAR NÚMERO DE WHATSAPP</button>
+        
+        <!-- Nota de importancia elegida -->
+        <div class="notice-box" id="noticeBox">
+            <p>⚠️ <strong>IMPORTANTE:</strong> Asegúrate de que los 10 dígitos sean correctos. A este número le llegarán las alertas de entrada y salida de tu hijo(a).</p>
+        </div>
+
+        <button onclick="savePhone()">💾 GUARDAR NÚMERO DE WHATSAPP</button>
     </div>
 
     <div class="status" id="statusMsg"></div>
@@ -145,13 +182,11 @@
             });
     };
 
-    // Al seleccionar Turno (TM o TV)
     function onTurnChange() {
         const turn = document.getElementById('turnSelect').value;
         const groupDiv = document.getElementById('groupDiv');
         const groupSelect = document.getElementById('groupSelect');
 
-        // Resetear selecciones inferiores
         document.getElementById('studentDiv').style.display = "none";
         document.getElementById('studentCard').style.display = "none";
         document.getElementById('phoneGroup').style.display = "none";
@@ -162,7 +197,6 @@
             return;
         }
 
-        // Obtener pestañas únicas que coincidan con el turno elegido
         const matchedSheets = [...new Set(allStudents.map(s => s.sheetName))]
             .filter(name => name.toUpperCase().endsWith(turn));
 
@@ -178,7 +212,6 @@
         groupDiv.style.display = "block";
     }
 
-    // Al seleccionar Grupo
     function onGroupChange() {
         const selectedSheet = document.getElementById('groupSelect').value;
         const studentDiv = document.getElementById('studentDiv');
@@ -198,7 +231,7 @@
         studentSelect.innerHTML = '<option value="">-- Selecciona el Nombre del Alumno --</option>';
         filtered.forEach((s, index) => {
             const opt = document.createElement('option');
-            opt.value = index; // Guarda el índice del alumno filtrado
+            opt.value = index;
             opt.innerText = s.nombre;
             studentSelect.appendChild(opt);
         });
@@ -206,7 +239,6 @@
         studentDiv.style.display = "block";
     }
 
-    // Al seleccionar Alumno
     function selectStudent() {
         const selectedSheet = document.getElementById('groupSelect').value;
         const studentSelectValue = document.getElementById('studentSelect').value;
@@ -231,14 +263,12 @@
             
             document.getElementById('phoneInput').value = selectedStudent.telefono || "";
             
-            // Mostrar la tarjeta y la casilla del teléfono con su botón
             document.getElementById('studentCard').style.display = "block";
             document.getElementById('phoneGroup').style.display = "block";
             document.getElementById('statusMsg').innerText = "";
         }
     }
 
-    // Al hacer clic en Guardar
     function savePhone() {
         if (!selectedStudent) return;
 
