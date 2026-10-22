@@ -51,6 +51,7 @@
             outline: none;
         }
         input:focus, select:focus { border-color: #38bdf8; }
+        select:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .card-info {
             background: #0f172a;
@@ -91,6 +92,14 @@
             transition: 0.2s;
         }
         button:hover { background: #16a34a; color: #fff; }
+
+        .success-box {
+            text-align: center;
+            padding: 30px 10px;
+            display: none;
+        }
+        .success-box h3 { color: #22c55e; margin-bottom: 12px; font-size: 24px; }
+        .success-box p { color: #cbd5e1; font-size: 15px; line-height: 1.5; margin: 0; }
         
         .status {
             text-align: center;
@@ -112,53 +121,61 @@
         <p>Studio Vivencia — Registro de WhatsApp de Tutores</p>
     </div>
 
-    <!-- 1. Seleccionar Turno -->
-    <div class="form-group">
-        <label>1. Selecciona el Turno:</label>
-        <select id="turnSelect" onchange="onTurnChange()">
-            <option value="">-- Selecciona el Turno --</option>
-            <option value="TM">Turno Matutino</option>
-            <option value="TV">Turno Vespertino</option>
-        </select>
-    </div>
-
-    <!-- 2. Seleccionar Grado y Grupo -->
-    <div class="form-group" id="groupDiv" style="display: none;">
-        <label>2. Selecciona el Grado y Grupo:</label>
-        <select id="groupSelect" onchange="onGroupChange()">
-            <option value="">-- Selecciona el Grupo --</option>
-        </select>
-    </div>
-
-    <!-- 3. Seleccionar Alumno -->
-    <div class="form-group" id="studentDiv" style="display: none;">
-        <label>3. Selecciona el Nombre del Alumno:</label>
-        <select id="studentSelect" onchange="selectStudent()">
-            <option value="">-- Selecciona un alumno --</option>
-        </select>
-    </div>
-
-    <!-- 4. Ficha de Datos del Alumno -->
-    <div class="card-info" id="studentCard">
-        <p><strong>Alumno:</strong> <span id="infoNombre">-</span></p>
-        <p><strong>Grupo y Turno:</strong> <span id="infoGrado">-</span></p>
-        <p><strong>CURP:</strong> <span id="infoCurp">-</span></p>
-    </div>
-
-    <!-- 5. Registro de Teléfono con Protección de Datos -->
-    <!-- 5. Registro de Teléfono con Protección de Datos -->
-    <div class="form-group" id="phoneGroup" style="display: none;">
-        <label>4. Número de WhatsApp del Tutor (10 dígitos):</label>
-        <input type="tel" id="phoneInput" placeholder="Ej: 5512345678" maxlength="10" autocomplete="off" data-lpignore="true">
-        
-        <div class="notice-box" id="noticeBox">
-            <p>⚠️ <strong>IMPORTANTE:</strong> Asegúrate de que los 10 dígitos sean correctos. A este número le llegarán las alertas de entrada y salida de tu hijo(a).</p>
+    <!-- Formulario Principal -->
+    <div id="mainFormContainer">
+        <!-- 1. Seleccionar Turno -->
+        <div class="form-group">
+            <label>1. Selecciona el Turno:</label>
+            <select id="turnSelect" onchange="onTurnChange()" disabled>
+                <option value="">-- Selecciona el Turno --</option>
+                <option value="TM">Turno Matutino</option>
+                <option value="TV">Turno Vespertino</option>
+            </select>
         </div>
 
-        <button onclick="savePhone()">💾 GUARDAR NÚMERO DE WHATSAPP</button>
+        <!-- 2. Seleccionar Grado y Grupo -->
+        <div class="form-group" id="groupDiv" style="display: none;">
+            <label>2. Selecciona el Grado y Grupo:</label>
+            <select id="groupSelect" onchange="onGroupChange()">
+                <option value="">-- Selecciona el Grupo --</option>
+            </select>
+        </div>
+
+        <!-- 3. Seleccionar Alumno -->
+        <div class="form-group" id="studentDiv" style="display: none;">
+            <label>3. Selecciona el Nombre del Alumno:</label>
+            <select id="studentSelect" onchange="selectStudent()">
+                <option value="">-- Selecciona un alumno --</option>
+            </select>
+        </div>
+
+        <!-- 4. Ficha de Datos del Alumno -->
+        <div class="card-info" id="studentCard">
+            <p><strong>Alumno:</strong> <span id="infoNombre">-</span></p>
+            <p><strong>Grupo y Turno:</strong> <span id="infoGrado">-</span></p>
+        </div>
+
+        <!-- 5. Registro de Teléfono -->
+        <div class="form-group" id="phoneGroup" style="display: none;">
+            <label>4. Número de WhatsApp del Tutor (10 dígitos):</label>
+            <input type="tel" id="phoneInput" placeholder="Ej: 5512345678" maxlength="10" autocomplete="off" data-lpignore="true">
+            
+            <div class="notice-box">
+                <p>⚠️ <strong>IMPORTANTE:</strong> Asegúrate de que los 10 dígitos sean correctos. A este número le llegarán las alertas de entrada y salida de tu hijo(a).</p>
+            </div>
+
+            <button onclick="savePhone()">💾 GUARDAR NÚMERO DE WHATSAPP</button>
+        </div>
     </div>
 
-    <div class="status" id="statusMsg"></div>
+    <!-- Pantalla de Agradecimiento Final -->
+    <div class="success-box" id="successBox">
+        <h3>✅ ¡Registro Exitoso!</h3>
+        <p>Muchas gracias. Su número ha sido guardado correctamente en el sistema. Ya puede cerrar esta ventana.</p>
+    </div>
+
+    <!-- Mensaje de Estado y Carga -->
+    <div class="status" id="statusMsg">⏳ Carga de datos en proceso, por favor espere un momento...</div>
 </div>
 
 <script>
@@ -166,20 +183,37 @@
 
     let allStudents = [];
     let selectedStudent = null;
+    let dataLoaded = false;
 
     window.onload = function() {
+        const statusMsg = document.getElementById('statusMsg');
+        statusMsg.innerText = "⏳ Carga de datos en proceso, por favor espere un momento...";
+        statusMsg.style.color = "#38bdf8";
+
         fetch(SCRIPT_URL + "?action=getStudents")
             .then(res => res.json())
             .then(data => {
                 allStudents = data;
+                dataLoaded = true;
+                
+                // Habilitar selección de turno
+                document.getElementById('turnSelect').disabled = false;
+                statusMsg.innerText = "";
+
+                // Si el usuario ya había seleccionado un turno mientras cargaba, procesarlo
+                if (document.getElementById('turnSelect').value) {
+                    onTurnChange();
+                }
             })
             .catch(err => {
-                document.getElementById('statusMsg').innerText = "❌ Error al cargar lista de alumnos.";
-                document.getElementById('statusMsg').style.color = "#ef4444";
+                statusMsg.innerText = "❌ Error de conexión al cargar la lista de alumnos. Intente recargar la página.";
+                statusMsg.style.color = "#ef4444";
             });
     };
 
     function onTurnChange() {
+        if (!dataLoaded) return;
+
         const turn = document.getElementById('turnSelect').value;
         const groupDiv = document.getElementById('groupDiv');
         const groupSelect = document.getElementById('groupSelect');
@@ -256,9 +290,7 @@
             let displayTurno = selectedStudent.sheetName.toUpperCase().includes("TM") ? "Turno Matutino" : "Turno Vespertino";
             let displayGrupo = selectedStudent.sheetName.replace(/TM|TV/gi, "").trim();
             document.getElementById('infoGrado').innerText = `Grupo ${displayGrupo} (${displayTurno})`;
-            document.getElementById('infoCurp').innerText = selectedStudent.curp || "N/A";
             
-            // 🔒 SEGURIDAD: Siempre dejar la casilla vacía para proteger la privacidad
             document.getElementById('phoneInput').value = "";
             
             document.getElementById('studentCard').style.display = "block";
@@ -293,11 +325,9 @@
         .then(res => res.json())
         .then(data => {
             if (data.status === "success") {
-                statusMsg.innerText = "✅ ¡Número registrado correctamente!";
-                statusMsg.style.color = "#22c55e";
-                
-                // 🔒 SEGURIDAD: Limpiar la casilla inmediatamente al guardar
-                document.getElementById('phoneInput').value = "";
+                document.getElementById('mainFormContainer').style.display = "none";
+                document.getElementById('statusMsg').style.display = "none";
+                document.getElementById('successBox').style.display = "block";
             } else {
                 statusMsg.innerText = "❌ Hubo un problema al guardar.";
                 statusMsg.style.color = "#ef4444";
