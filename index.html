@@ -83,32 +83,42 @@
         <p>Studio Vivencia — Registro de WhatsApp de Tutores</p>
     </div>
 
-    <!-- 1. Seleccionar Grado, Grupo y Turno -->
+    <!-- 1. Seleccionar Turno -->
     <div class="form-group">
-        <label>1. Selecciona el Grado, Grupo y Turno:</label>
-        <select id="groupSelect" onchange="onGroupChange()">
-            <option value="">-- Cargando lista de grupos... --</option>
+        <label>1. Selecciona el Turno:</label>
+        <select id="turnSelect" onchange="onTurnChange()">
+            <option value="">-- Selecciona el Turno --</option>
+            <option value="TM">Turno Matutino</option>
+            <option value="TV">Turno Vespertino</option>
         </select>
     </div>
 
-    <!-- 2. Seleccionar Alumno -->
-    <div class="form-group" id="studentGroup" style="display: none;">
-        <label>2. Selecciona el Nombre del Alumno:</label>
+    <!-- 2. Seleccionar Grado y Grupo -->
+    <div class="form-group" id="groupDiv" style="display: none;">
+        <label>2. Selecciona el Grado y Grupo:</label>
+        <select id="groupSelect" onchange="onGroupChange()">
+            <option value="">-- Selecciona el Grupo --</option>
+        </select>
+    </div>
+
+    <!-- 3. Seleccionar Alumno -->
+    <div class="form-group" id="studentDiv" style="display: none;">
+        <label>3. Selecciona el Nombre del Alumno:</label>
         <select id="studentSelect" onchange="selectStudent()">
             <option value="">-- Selecciona un alumno --</option>
         </select>
     </div>
 
-    <!-- 3. Ficha de Datos del Alumno -->
+    <!-- 4. Ficha de Datos del Alumno -->
     <div class="card-info" id="studentCard">
         <p><strong>Alumno:</strong> <span id="infoNombre">-</span></p>
-        <p><strong>Grado, Grupo y Turno:</strong> <span id="infoGrado">-</span></p>
+        <p><strong>Grupo y Turno:</strong> <span id="infoGrado">-</span></p>
         <p><strong>CURP:</strong> <span id="infoCurp">-</span></p>
     </div>
 
-    <!-- 4. Registro de Teléfono -->
+    <!-- 5. Registro de Teléfono -->
     <div class="form-group" id="phoneGroup" style="display: none;">
-        <label>3. Número de WhatsApp del Tutor (10 dígitos):</label>
+        <label>4. Número de WhatsApp del Tutor (10 dígitos):</label>
         <input type="tel" id="phoneInput" placeholder="Ej: 5512345678" maxlength="10">
         <button style="margin-top: 15px;" onclick="savePhone()">💾 GUARDAR NÚMERO DE WHATSAPP</button>
     </div>
@@ -117,7 +127,7 @@
 </div>
 
 <script>
-    // ⚠️ TU URL DE GOOGLE APPS SCRIPT
+    // ⚠️ TU URL DE GOOGLE APPS SCRIPT (Verifica que sea la correcta que termina en /exec)
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyP8W6dhKXtbqGVkbJGJDV96M-Y5raFrxHrTMDX3i8Ktv06ubcn-i4dfQDJm-rH2NLdbQ/exec";
 
     let allStudents = [];
@@ -128,7 +138,6 @@
             .then(res => res.json())
             .then(data => {
                 allStudents = data;
-                populateGroups(allStudents);
             })
             .catch(err => {
                 document.getElementById('statusMsg').innerText = "❌ Error al cargar lista de alumnos.";
@@ -136,67 +145,80 @@
             });
     };
 
-    // Función para convertir TM/TV a texto completo para los papás
-    function formatGroupName(code) {
-        if (!code) return "";
-        let text = code.toString().trim();
-        text = text.replace(/\bTM\b/gi, "Turno Matutino");
-        text = text.replace(/\bTV\b/gi, "Turno Vespertino");
-        return text;
-    }
-
-    function populateGroups(students) {
+    // Cuando el papá elige el Turno (TM o TV)
+    function onTurnChange() {
+        const turn = document.getElementById('turnSelect').value;
+        const groupDiv = document.getElementById('groupDiv');
         const groupSelect = document.getElementById('groupSelect');
-        groupSelect.innerHTML = '<option value="">-- Selecciona Grado, Grupo y Turno --</option>';
 
-        // Extraer lista única de grupos de la hoja
-        const groups = [...new Set(students.map(s => s.gradoGrupo))].sort();
+        // Limpiar selecciones posteriores
+        document.getElementById('studentDiv').style.display = "none";
+        document.getElementById('studentCard').style.display = "none";
+        document.getElementById('phoneGroup').style.display = "none";
+        document.getElementById('statusMsg').innerText = "";
 
-        groups.forEach(g => {
-            if(g) {
-                const opt = document.createElement('option');
-                opt.value = g; // Mantiene '1º A TM' internamente para buscar
-                opt.innerText = formatGroupName(g); // Muestra '1º A Turno Matutino' al papá
-                groupSelect.appendChild(opt);
-            }
+        if (!turn) {
+            groupDiv.style.display = "none";
+            return;
+        }
+
+        // Filtrar las pestañas de Google Sheets que coincidan con el turno seleccionado (terminan en TM o TV)
+        const matchedSheets = [...new Set(allStudents.map(s => s.sheetName))]
+            .filter(name => name.toUpperCase().endsWith(turn));
+
+        groupSelect.innerHTML = '<option value="">-- Selecciona el Grupo --</option>';
+        matchedSheets.forEach(sheet => {
+            const opt = document.createElement('option');
+            opt.value = sheet; // Ej: "1A TM"
+            // Mostrar solo la parte del grupo (ej: "1A")
+            let groupName = sheet.replace(/TM|TV/gi, "").trim();
+            opt.innerText = "Grupo " + groupName; 
+            groupSelect.appendChild(opt);
         });
+
+        groupDiv.style.display = "block";
     }
 
+    // Cuando el papá elige el Grupo (ej: 1A TM)
     function onGroupChange() {
-        const selectedGroup = document.getElementById('groupSelect').value;
+        const selectedSheet = document.getElementById('groupSelect').value;
+        const studentDiv = document.getElementById('studentDiv');
         const studentSelect = document.getElementById('studentSelect');
-        const studentGroupDiv = document.getElementById('studentGroup');
         
         document.getElementById('studentCard').style.display = "none";
         document.getElementById('phoneGroup').style.display = "none";
         document.getElementById('statusMsg').innerText = "";
 
-        if (!selectedGroup) {
-            studentGroupDiv.style.display = "none";
+        if (!selectedSheet) {
+            studentDiv.style.display = "none";
             return;
         }
 
-        // Filtrar alumnos coincidiendo con la clave de la hoja
-        const filtered = allStudents.filter(s => s.gradoGrupo === selectedGroup);
+        const filtered = allStudents.filter(s => s.sheetName === selectedSheet);
 
         studentSelect.innerHTML = '<option value="">-- Selecciona el Nombre del Alumno --</option>';
-        filtered.forEach(s => {
+        filtered.forEach((s, index) => {
             const opt = document.createElement('option');
-            opt.value = s.id;
+            opt.value = index;
             opt.innerText = s.nombre;
             studentSelect.appendChild(opt);
         });
 
-        studentGroupDiv.style.display = "block";
+        studentDiv.style.display = "block";
     }
 
     function selectStudent() {
-        const id = document.getElementById('studentSelect').value;
-        selectedStudent = allStudents.find(s => s.id == id);
+        const selectedSheet = document.getElementById('groupSelect').value;
+        const filtered = allStudents.filter(s => s.sheetName === selectedSheet);
+        const index = document.getElementById('studentSelect').value;
+        
+        selectedStudent = filtered[index];
 
         if (selectedStudent) {
             document.getElementById('infoNombre').innerText = selectedStudent.nombre;
-            document.getElementById('infoGrado').innerText = formatGroupName(selectedStudent.gradoGrupo);
+            let displayTurno = selectedStudent.sheetName.includes("TM") ? "Turno Matutino" : "Turno Vespertino";
+            let displayGrupo = selectedStudent.sheetName.replace(/TM|TV/gi, "").trim();
+            document.getElementById('infoGrado').innerText = `Grupo ${displayGrupo} (${displayTurno})`;
             document.getElementById('infoCurp').innerText = selectedStudent.curp;
             
             document.getElementById('phoneInput').value = selectedStudent.telefono || "";
@@ -222,7 +244,8 @@
         fetch(SCRIPT_URL, {
             method: "POST",
             body: JSON.stringify({
-                id: selectedStudent.id,
+                sheetName: selectedStudent.sheetName,
+                rowId: selectedStudent.rowId,
                 telefono: phone
             })
         })
