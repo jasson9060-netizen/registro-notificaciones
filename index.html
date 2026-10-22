@@ -127,7 +127,7 @@
 </div>
 
 <script>
-    // ⚠️ TU URL DE GOOGLE APPS SCRIPT (Verifica que sea la correcta que termina en /exec)
+    // ⚠️ TU URL DE GOOGLE APPS SCRIPT
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyP8W6dhKXtbqGVkbJGJDV96M-Y5raFrxHrTMDX3i8Ktv06ubcn-i4dfQDJm-rH2NLdbQ/exec";
 
     let allStudents = [];
@@ -145,13 +145,13 @@
             });
     };
 
-    // Cuando el papá elige el Turno (TM o TV)
+    // Al seleccionar Turno (TM o TV)
     function onTurnChange() {
         const turn = document.getElementById('turnSelect').value;
         const groupDiv = document.getElementById('groupDiv');
         const groupSelect = document.getElementById('groupSelect');
 
-        // Limpiar selecciones posteriores
+        // Resetear selecciones inferiores
         document.getElementById('studentDiv').style.display = "none";
         document.getElementById('studentCard').style.display = "none";
         document.getElementById('phoneGroup').style.display = "none";
@@ -162,15 +162,14 @@
             return;
         }
 
-        // Filtrar las pestañas de Google Sheets que coincidan con el turno seleccionado (terminan en TM o TV)
+        // Obtener pestañas únicas que coincidan con el turno elegido
         const matchedSheets = [...new Set(allStudents.map(s => s.sheetName))]
             .filter(name => name.toUpperCase().endsWith(turn));
 
         groupSelect.innerHTML = '<option value="">-- Selecciona el Grupo --</option>';
         matchedSheets.forEach(sheet => {
             const opt = document.createElement('option');
-            opt.value = sheet; // Ej: "1A TM"
-            // Mostrar solo la parte del grupo (ej: "1A")
+            opt.value = sheet;
             let groupName = sheet.replace(/TM|TV/gi, "").trim();
             opt.innerText = "Grupo " + groupName; 
             groupSelect.appendChild(opt);
@@ -179,7 +178,7 @@
         groupDiv.style.display = "block";
     }
 
-    // Cuando el papá elige el Grupo (ej: 1A TM)
+    // Al seleccionar Grupo
     function onGroupChange() {
         const selectedSheet = document.getElementById('groupSelect').value;
         const studentDiv = document.getElementById('studentDiv');
@@ -199,7 +198,7 @@
         studentSelect.innerHTML = '<option value="">-- Selecciona el Nombre del Alumno --</option>';
         filtered.forEach((s, index) => {
             const opt = document.createElement('option');
-            opt.value = index;
+            opt.value = index; // Guarda el índice del alumno filtrado
             opt.innerText = s.nombre;
             studentSelect.appendChild(opt);
         });
@@ -207,28 +206,42 @@
         studentDiv.style.display = "block";
     }
 
+    // Al seleccionar Alumno
     function selectStudent() {
         const selectedSheet = document.getElementById('groupSelect').value;
-        const filtered = allStudents.filter(s => s.sheetName === selectedSheet);
-        const index = document.getElementById('studentSelect').value;
+        const studentSelectValue = document.getElementById('studentSelect').value;
         
-        selectedStudent = filtered[index];
+        if (studentSelectValue === "") {
+            document.getElementById('studentCard').style.display = "none";
+            document.getElementById('phoneGroup').style.display = "none";
+            document.getElementById('statusMsg').innerText = "";
+            selectedStudent = null;
+            return;
+        }
+
+        const filtered = allStudents.filter(s => s.sheetName === selectedSheet);
+        selectedStudent = filtered[studentSelectValue];
 
         if (selectedStudent) {
             document.getElementById('infoNombre').innerText = selectedStudent.nombre;
-            let displayTurno = selectedStudent.sheetName.includes("TM") ? "Turno Matutino" : "Turno Vespertino";
+            let displayTurno = selectedStudent.sheetName.toUpperCase().includes("TM") ? "Turno Matutino" : "Turno Vespertino";
             let displayGrupo = selectedStudent.sheetName.replace(/TM|TV/gi, "").trim();
             document.getElementById('infoGrado').innerText = `Grupo ${displayGrupo} (${displayTurno})`;
-            document.getElementById('infoCurp').innerText = selectedStudent.curp;
+            document.getElementById('infoCurp').innerText = selectedStudent.curp || "N/A";
             
             document.getElementById('phoneInput').value = selectedStudent.telefono || "";
+            
+            // Mostrar la tarjeta y la casilla del teléfono con su botón
             document.getElementById('studentCard').style.display = "block";
             document.getElementById('phoneGroup').style.display = "block";
             document.getElementById('statusMsg').innerText = "";
         }
     }
 
+    // Al hacer clic en Guardar
     function savePhone() {
+        if (!selectedStudent) return;
+
         const phone = document.getElementById('phoneInput').value.trim();
         const statusMsg = document.getElementById('statusMsg');
 
