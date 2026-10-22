@@ -24,10 +24,7 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             border: 1px solid #334155;
         }
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+        .header { text-align: center; margin-bottom: 20px; }
         .header h2 { margin: 0; color: #38bdf8; font-size: 20px; }
         .header p { color: #94a3b8; font-size: 13px; margin-top: 5px; }
         
@@ -86,28 +83,32 @@
         <p>Studio Vivencia — Registro de WhatsApp de Tutores</p>
     </div>
 
-    <!-- 1. Buscar Alumno -->
+    <!-- 1. Seleccionar Grado, Grupo y Turno -->
     <div class="form-group">
-        <label>1. Selecciona o busca el Nombre del Alumno:</label>
-        <input type="text" id="searchInput" placeholder="Escribe el nombre del alumno..." oninput="filterStudents()">
-    </div>
-
-    <div class="form-group">
-        <select id="studentSelect" size="5" onchange="selectStudent()">
-            <option value="">Cargando lista de alumnos...</option>
+        <label>1. Selecciona el Grado, Grupo y Turno:</label>
+        <select id="groupSelect" onchange="onGroupChange()">
+            <option value="">-- Cargando lista de grupos... --</option>
         </select>
     </div>
 
-    <!-- 2. Información del Alumno Seleccionado -->
+    <!-- 2. Seleccionar Alumno -->
+    <div class="form-group" id="studentGroup" style="display: none;">
+        <label>2. Selecciona el Nombre del Alumno:</label>
+        <select id="studentSelect" onchange="selectStudent()">
+            <option value="">-- Selecciona un alumno --</option>
+        </select>
+    </div>
+
+    <!-- 3. Ficha de Datos del Alumno -->
     <div class="card-info" id="studentCard">
         <p><strong>Alumno:</strong> <span id="infoNombre">-</span></p>
-        <p><strong>Grado y Grupo:</strong> <span id="infoGrado">-</span></p>
+        <p><strong>Grado, Grupo y Turno:</strong> <span id="infoGrado">-</span></p>
         <p><strong>CURP:</strong> <span id="infoCurp">-</span></p>
     </div>
 
-    <!-- 3. Campo de Teléfono -->
+    <!-- 4. Registro de Teléfono -->
     <div class="form-group" id="phoneGroup" style="display: none;">
-        <label>2. Número de WhatsApp del Tutor (10 dígitos):</label>
+        <label>3. Número de WhatsApp del Tutor (10 dígitos):</label>
         <input type="tel" id="phoneInput" placeholder="Ej: 5512345678" maxlength="10">
         <button style="margin-top: 15px;" onclick="savePhone()">💾 GUARDAR NÚMERO DE WHATSAPP</button>
     </div>
@@ -116,19 +117,18 @@
 </div>
 
 <script>
-    // ⚠️ REEMPLAZA ESTA URL CON LA TUYA DE GOOGLE APPS SCRIPT
+    // ⚠️ TU URL DE GOOGLE APPS SCRIPT
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyP8W6dhKXtbqGVkbJGJDV96M-Y5raFrxHrTMDX3i8Ktv06ubcn-i4dfQDJm-rH2NLdbQ/exec";
 
     let allStudents = [];
     let selectedStudent = null;
 
-    // Cargar alumnos al abrir la página
     window.onload = function() {
         fetch(SCRIPT_URL + "?action=getStudents")
             .then(res => res.json())
             .then(data => {
                 allStudents = data;
-                renderStudentList(allStudents);
+                populateGroups(allStudents);
             })
             .catch(err => {
                 document.getElementById('statusMsg').innerText = "❌ Error al cargar lista de alumnos.";
@@ -136,28 +136,58 @@
             });
     };
 
-    function renderStudentList(list) {
-        const select = document.getElementById('studentSelect');
-        select.innerHTML = "";
-        if(list.length === 0) {
-            select.innerHTML = '<option value="">No se encontraron alumnos</option>';
-            return;
-        }
-        list.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s.id;
-            opt.innerText = `${s.nombre} (${s.gradoGrupo})`;
-            select.appendChild(opt);
+    // Función para convertir TM/TV a texto completo para los papás
+    function formatGroupName(code) {
+        if (!code) return "";
+        let text = code.toString().trim();
+        text = text.replace(/\bTM\b/gi, "Turno Matutino");
+        text = text.replace(/\bTV\b/gi, "Turno Vespertino");
+        return text;
+    }
+
+    function populateGroups(students) {
+        const groupSelect = document.getElementById('groupSelect');
+        groupSelect.innerHTML = '<option value="">-- Selecciona Grado, Grupo y Turno --</option>';
+
+        // Extraer lista única de grupos de la hoja
+        const groups = [...new Set(students.map(s => s.gradoGrupo))].sort();
+
+        groups.forEach(g => {
+            if(g) {
+                const opt = document.createElement('option');
+                opt.value = g; // Mantiene '1º A TM' internamente para buscar
+                opt.innerText = formatGroupName(g); // Muestra '1º A Turno Matutino' al papá
+                groupSelect.appendChild(opt);
+            }
         });
     }
 
-    function filterStudents() {
-        const query = document.getElementById('searchInput').value.toLowerCase();
-        const filtered = allStudents.filter(s => 
-            s.nombre.toLowerCase().includes(query) || 
-            s.gradoGrupo.toLowerCase().includes(query)
-        );
-        renderStudentList(filtered);
+    function onGroupChange() {
+        const selectedGroup = document.getElementById('groupSelect').value;
+        const studentSelect = document.getElementById('studentSelect');
+        const studentGroupDiv = document.getElementById('studentGroup');
+        
+        document.getElementById('studentCard').style.display = "none";
+        document.getElementById('phoneGroup').style.display = "none";
+        document.getElementById('statusMsg').innerText = "";
+
+        if (!selectedGroup) {
+            studentGroupDiv.style.display = "none";
+            return;
+        }
+
+        // Filtrar alumnos coincidiendo con la clave de la hoja
+        const filtered = allStudents.filter(s => s.gradoGrupo === selectedGroup);
+
+        studentSelect.innerHTML = '<option value="">-- Selecciona el Nombre del Alumno --</option>';
+        filtered.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.innerText = s.nombre;
+            studentSelect.appendChild(opt);
+        });
+
+        studentGroupDiv.style.display = "block";
     }
 
     function selectStudent() {
@@ -166,7 +196,7 @@
 
         if (selectedStudent) {
             document.getElementById('infoNombre').innerText = selectedStudent.nombre;
-            document.getElementById('infoGrado').innerText = selectedStudent.gradoGrupo;
+            document.getElementById('infoGrado').innerText = formatGroupName(selectedStudent.gradoGrupo);
             document.getElementById('infoCurp').innerText = selectedStudent.curp;
             
             document.getElementById('phoneInput').value = selectedStudent.telefono || "";
@@ -201,7 +231,7 @@
             if (data.status === "success") {
                 statusMsg.innerText = "✅ ¡Número registrado correctamente!";
                 statusMsg.style.color = "#22c55e";
-                selectedStudent.telefono = phone; // Actualizar en memoria local
+                selectedStudent.telefono = phone;
             } else {
                 statusMsg.innerText = "❌ Hubo un problema al guardar.";
                 statusMsg.style.color = "#ef4444";
